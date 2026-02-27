@@ -1,0 +1,36 @@
+{
+  "name": "@nous-labs/quota-tracker",
+  "version": "0.1.0",
+  "description": "Rate limit quota tracking with sliding windows, threshold classification, and preemptive fallback signals for AI coding assistants.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node && tsc --emitDeclarationOnly",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "keywords": [
+    "ratelimit",
+    "quota",
+    "ai",
+    "opencode",
+    "anthropic",
+    "provider"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/bun": "latest"
+  }
+}
