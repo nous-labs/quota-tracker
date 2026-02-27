@@ -6,18 +6,21 @@ Used by oh-my-opencode to track API provider rate limits and trigger preemptive 
 
 ## Installation
 
+Clone the repository:
+
 ```bash
-bun add @nous-labs/quota-tracker
-# or
-npm install @nous-labs/quota-tracker
+git clone https://github.com/nous-labs/quota-tracker.git
 ```
 
-Zero runtime dependencies.
+Add as a local dependency in your project's `package.json`. Note: the local directory may be named `nous-quota-tracker` but the cloned repo will be `quota-tracker`.
 
-## Requirements
-
-- Bun or Node.js
-- TypeScript
+```json
+{
+  "dependencies": {
+    "@nous-labs/quota-tracker": "file:../quota-tracker"
+  }
+}
+```
 
 ## API
 
@@ -27,11 +30,10 @@ Creates a stateful tracker instance.
 
 Returns an object with:
 
-- `ingest(snapshot)` — ingest a rate limit snapshot
-- `getStatus(providerID)` — get current status for a provider
-- `getAllStatuses()` — get status for all tracked providers
-- `shouldPreemptFallback(providerID)` — check if fallback should be triggered
-- `reset()` — clear all tracked state
+- `record(snapshot)` — record a rate limit snapshot
+- `status(providerID)` — get current status for a provider
+- `all()` — get status map for all tracked providers
+- `shouldPreempt(providerID)` — check if fallback should be triggered (returns true at critical level)
 
 ### `parseAnthropicUnified(headers)`
 
@@ -71,34 +73,38 @@ type QuotaLevel = "ok" | "warning" | "critical" | "unknown";
 interface RatelimitSnapshot {
   providerID: string;
   modelID: string;
-  requests: { remaining: number; limit: number; reset: number };
-  tokens: { remaining: number; limit: number; reset: number };
+  requests: {
+    remaining?: number;
+    limit?: number;
+    reset?: string;
+  };
+  tokens: {
+    remaining?: number;
+    limit?: number;
+    reset?: string;
+  };
   unified?: UnifiedUtilization;
   raw?: Record<string, string>;
   timestamp: number;
 }
-```
 
 ### `UnifiedUtilization`
 
 ```typescript
 interface UnifiedUtilization {
-  utilization: number;  // 0.0 to 1.0
-  remaining: number;
-  limit: number;
+  utilization?: number;
+  status?: string;
+  reset?: number;
+  window?: string;
 }
-```
 
 ### `ProviderQuota`
 
 ```typescript
 interface ProviderQuota {
-  requests: { remaining: number; limit: number; reset: number };
-  tokens: { remaining: number; limit: number; reset: number };
-  unified?: UnifiedUtilization;
+  snapshots: RatelimitSnapshot[];
   lastUpdated: number;
 }
-```
 
 ### `QuotaStatus`
 
@@ -106,23 +112,16 @@ interface ProviderQuota {
 interface QuotaStatus {
   level: QuotaLevel;
   providerID: string;
-  requests?: ProviderQuota["requests"];
-  tokens?: ProviderQuota["tokens"];
+  requests?: { remaining?: number; limit?: number };
+  tokens?: { remaining?: number; limit?: number };
   unified?: UnifiedUtilization;
   lastUpdated: number;
 }
-```
 
 ### `Logger`
 
 ```typescript
-interface Logger {
-  debug?: (msg: string, meta?: unknown) => void;
-  info?: (msg: string, meta?: unknown) => void;
-  warn?: (msg: string, meta?: unknown) => void;
-  error?: (msg: string, meta?: unknown) => void;
-}
-```
+type Logger = (message: string, data?: Record<string, unknown>) => void;
 
 ## Usage
 
@@ -144,19 +143,19 @@ const headers = {
 const snapshot = parseAnthropicUnified(headers);
 
 // Ingest the snapshot
-tracker.ingest(snapshot);
+tracker.record(snapshot);
 
 // Check current status
-const status = tracker.getStatus("anthropic");
+const status = tracker.status("anthropic");
 console.log(status.level); // "ok" | "warning" | "critical" | "unknown"
 
 // Check if we should preemptively fallback
-if (tracker.shouldPreemptFallback("anthropic")) {
+if (tracker.shouldPreempt("anthropic")) {
   // Switch to fallback provider before quota exhaustion
 }
 
 // Get all provider statuses
-const allStatuses = tracker.getAllStatuses();
+const allStatuses = tracker.all();
 ```
 
 ## Scripts
